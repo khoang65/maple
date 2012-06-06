@@ -54,6 +54,10 @@ class Analyzer {
   virtual void ThreadExit(thread_id_t curr_thd_id, timestamp_t curr_thd_clk) {}
   virtual void Main(thread_id_t curr_thd_id, timestamp_t curr_thd_clk) {}
   virtual void ThreadMain(thread_id_t curr_thd_id, timestamp_t curr_thd_clk) {}
+  virtual void Call(thread_id_t curr_thd_id, timestamp_t curr_thd_clk,
+                    Inst *inst, address_t ret_addr, address_t target_addr) {}
+  virtual void Return(thread_id_t curr_thd_id, timestamp_t curr_thd_clk,
+                      Inst *inst, address_t target_addr) {}
   virtual void BeforeMemRead(thread_id_t curr_thd_id, timestamp_t curr_thd_clk,
                              Inst *inst, address_t addr, size_t size) {}
   virtual void AfterMemRead(thread_id_t curr_thd_id, timestamp_t curr_thd_clk,
