@@ -21,24 +21,24 @@ allow it to be disabled to allow inspect to run freely.
 ## BUGGY INTERLEAVING
 ~~~~~
 Initially, account->balance == 0
-Thread 1				|		Thread 2
+Thread 1                                |               Thread 2
 ----------------------------------------|--------------------------------------
-deposit(...) {				|withdraw(...) {
-					|   int curr_balance = 0;
-					|   curr_balanace = get_balance(...);
-					|   /* curr_balance == 0 */
-					|
-    int curr_balance = 0;		|
-    curr_balance = get_balance(...)	|
-    /* curr_balance == 0 */		|
-    set_balance(account, curr_balance);	|
-    /* account->balance == 20 */	|
-					|   setbalance(account, curr_balance);
-}					|}
+deposit(...) {                          |withdraw(...) {
+                                        |   int curr_balance = 0;
+                                        |   curr_balanace = get_balance(...);
+                                        |   /* curr_balance == 0 */
+                                        |
+    int curr_balance = 0;               |
+    curr_balance = get_balance(...)     |
+    /* curr_balance == 0 */             |
+    set_balance(account, curr_balance); |
+    /* account->balance == 20 */        |
+                                        |   setbalance(account, curr_balance);
+}                                       |}
 ~~~~~
 
 The program asserts right before completion (end of main()) that
-account->balance == 0. This is	accurate since the account balance starts at 0
+account->balance == 0. This is  accurate since the account balance starts at 0
 dollars and then deposits 20 dollars and withdraws 20dollars (the ordering of
 the withdrawl and deposit is not guaranteed but this does not effect the end
 result).
