@@ -56,5 +56,5 @@ int get_balance(bank_account_type *account) {
 }
 ~~~~~
 
-The mutex causes threads to ``line up'' when accessing `account->balance`, but
+The mutex causes threads to "line up" when accessing `account->balance`, but
 does not guarantee atomicity in reading the balance and writing the balance.
