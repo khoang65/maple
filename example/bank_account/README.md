@@ -18,6 +18,9 @@ exits) there is a call `assert(account->balance == 0)`. This can be included in
 the binary if the preprocessor directive `ASSERT` is included. It was chosen to
 allow it to be disabled to allow inspect to run freely.
 
+The DEBUG preprocessor directive, when defined, will output some information to
+stdout.
+
 ## BUGGY INTERLEAVING
 ~~~~~
 Initially, account->balance == 0
