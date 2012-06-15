@@ -9,15 +9,21 @@
  *  See README.md for more information
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
 
 /* Comment out to insert calls to assert() */
 //#define ASSERT
 
+/* Comment out to disable calls to printf() */
+#define DEBUG
+
 #ifdef ASSERT
 #include <assert.h>
+#endif
+
+#ifdef DEBUG
+#include <stdio.h>
 #endif
 
 // typedefs
