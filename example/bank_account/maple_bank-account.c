@@ -9,10 +9,16 @@
  *  See README.md for more information
  */
 
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+
+/* Comment out to insert calls to assert() */
+//#define ASSERT
+
+#ifdef ASSERT
+#include <assert.h>
+#endif
 
 // typedefs
 typedef struct {
@@ -84,7 +90,10 @@ int main(int argc, char *argv[]) {
 
   // print results
   printf("balance = %d\n", account->balance);
+
+#ifdef ASSERT
   assert(account->balance == 0);
+#endif
 
   return 0;
 }
