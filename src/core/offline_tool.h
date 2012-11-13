@@ -45,9 +45,10 @@ class OfflineTool {
   virtual void HandleExit();
 
   Mutex *kernel_lock_;
-  CmdlineKnob *knob_;
+  Knob *knob_;
   LogFile *debug_file_;
   StaticInfo *sinfo_;
+  bool read_only_; // Whether this tool is a read-only tool.
 
   static OfflineTool *tool_;
 

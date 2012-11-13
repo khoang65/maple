@@ -19,6 +19,9 @@ import os
 from maple.core import logging
 from maple.core import proto
 
+_memo_failed_limit = 2
+_memo_total_failed_limit = 6
+
 def iroot_pb2():
     return proto.module('idiom.iroot_pb2')
 
@@ -33,8 +36,14 @@ class iRootInfo(object):
         return self.memo.iroot_db.find_iroot(self.proto.iroot_id)
     def total_test_runs(self):
         return self.proto.total_test_runs
+    def has_async(self):
+        return self.proto.HasField('async')
     def async(self):
         return self.proto.async
+    def set_total_test_runs(self, n):
+        self.proto.total_test_runs = n
+    def set_async(self, a):
+        self.proto.async = a
     def __str__(self):
         content = []
         content.append(str(self.iroot()))
@@ -83,10 +92,112 @@ class Memo(object):
             iroot = self.iroot_db.find_iroot(cand_proto.iroot_id)
             iroot_info = self.find_iroot_info(iroot)
             self.candidate_map[iroot_info] = cand_proto.test_runs
+    def save(self, db_name):
+        del self.proto.iroot_info[:]
+        del self.proto.exposed[:]
+        del self.proto.failed[:]
+        del self.proto.predicted[:]
+        del self.proto.shadow_exposed[:]
+        del self.proto.candidate[:]
+        for iroot_id, iroot_info in self.iroot_info_map.iteritems():
+            iroot_info_proto = self.proto.iroot_info.add()
+            iroot_info_proto.iroot_id = iroot_id
+            iroot_info_proto.total_test_runs = iroot_info.total_test_runs()
+            if (iroot_info.has_async()):
+                iroot_info_proto.async = iroot_info.async()
+        for iroot_info in self.exposed_set:
+            self.proto.exposed.append(iroot_info.iroot().id())
+        for iroot_info in self.failed_set:
+            self.proto.failed.append(iroot_info.iroot().id())
+        for iroot_info in self.predicted_set:
+            self.proto.predicted.append(iroot_info.iroot().id())
+        for iroot_info in self.shadow_exposed_set:
+            self.proto.shadow_exposed.append(iroot_info.iroot().id())
+        for iroot_info, test_runs in self.candidate_map.iteritems():
+            cand_proto = self.proto.candidate.add()
+            cand_proto.iroot_id = iroot_info.iroot().id()
+            cand_proto.test_runs = test_runs
+        f = open(db_name, 'wb')
+        f.write(self.proto.SerializeToString())
+        f.close()
     def size(self):
         return len(self.iroot_info_map)
-    def has_candidate(self):
-        return len(self.candidate_map) > 0
+    def predicted_size(self):
+        return len(self.predicted_set)
+    def candidate_size(self):
+        return len(self.candidate_map)
+    def clear_predicted_set(self):
+        self.predicted_set = set()
+    def clear_candidate_map(self):
+        self.candidate_map = {}
+    def has_candidate(self, idiom):
+        if idiom == 0:
+            return len(self.candidate_map) > 0
+        for iroot_info in self.candidate_map:
+            if iroot_info.iroot().idiom() == idiom:
+                return True
+        return False
+    def refine_candidate(self, memo_failed=True):
+        to_remove = []
+        for iroot_info, test_runs in self.candidate_map.iteritems():
+            if test_runs >= _memo_failed_limit:
+                to_remove.append(iroot_info)
+        for iroot_info in to_remove:
+            del self.candidate_map[iroot_info]
+        for iroot_info in self.exposed_set:
+            if iroot_info in self.candidate_map:
+                del self.candidate_map[iroot_info]
+        if memo_failed:
+            for iroot_info in self.failed_set:
+                if iroot_info in self.candidate_map:
+                    del self.candidate_map[iroot_info]
+    def mark_unexposed_failed(self):
+        for iroot_id, iroot_info in self.iroot_info_map.iteritems():
+            if not iroot_info in self.exposed_set:
+                self.failed_set.add(iroot_info)
+    def merge(self, other):
+        for other_iroot_id, other_iroot_info in other.iroot_info_map.iteritems():
+            if other_iroot_id in self.iroot_info_map:
+                iroot_info = self.iroot_info_map[other_iroot_id]
+                if other_iroot_info.total_test_runs() > iroot_info.total_test_runs():
+                    iroot_info.set_total_test_runs(other_iroot_info.total_test_runs())
+                if other_iroot_info.has_async() and other_iroot_info.async():
+                    iroot_info.set_async(True)
+            else:
+                self.iroot_info_map[other_iroot_id] = other_iroot_info
+        for other_iroot_info in other.exposed_set:
+            assert other_iroot_info.iroot().id() in self.iroot_info_map
+            iroot_info = self.iroot_info_map[other_iroot_info.iroot().id()]
+            self.exposed_set.add(iroot_info)
+        for other_iroot_info in other.failed_set:
+            assert other_iroot_info.iroot().id() in self.iroot_info_map
+            iroot_info = self.iroot_info_map[other_iroot_info.iroot().id()]
+            self.failed_set.add(iroot_info)
+        for other_iroot_info in other.predicted_set:
+            assert other_iroot_info.iroot().id() in self.iroot_info_map
+            iroot_info = self.iroot_info_map[other_iroot_info.iroot().id()]
+            self.predicted_set.add(iroot_info)
+        for other_iroot_info in other.shadow_exposed_set:
+            assert other_iroot_info.iroot().id() in self.iroot_info_map
+            iroot_info = self.iroot_info_map[other_iroot_info.iroot().id()]
+            self.shadow_exposed_set.add(iroot_info)
+        for other_iroot_info, test_runs in other.candidate_map.iteritems():
+            assert other_iroot_info.iroot().id() in self.iroot_info_map
+            iroot_info = self.iroot_info_map[other_iroot_info.iroot().id()]
+            if iroot_info in self.candidate_map:
+                if test_runs > self.candidate_map[iroot_info]:
+                    self.candidate_map[iroot_info] = test_runs
+            else:
+                self.candidate_map[iroot_info] = test_runs
+    def test_success(self, iroot_info):
+        self.candidate_map[iroot_info] += 1
+        iroot_info.set_total_test_runs(iroot_info.total_test_runs() + 1)
+        self.exposed_set.add(iroot_info)
+    def test_fail(self, iroot_info):
+        self.candidate_map[iroot_info] += 1
+        iroot_info.set_total_test_runs(iroot_info.total_test_runs() + 1)
+        if iroot_info.total_test_runs() >= _memo_total_failed_limit:
+            self.failed_set.add(iroot_info)
     def find_iroot_info(self, iroot):
         return self.iroot_info_map[iroot.id()]
     def get_exposed_set(self, idiom):

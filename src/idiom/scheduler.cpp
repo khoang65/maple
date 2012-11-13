@@ -42,10 +42,10 @@ void Scheduler::HandlePreSetup() {
   knob_->RegisterStr("sinst_out", "the output shared inst database path", "sinst.db");
   knob_->RegisterInt("target_idiom", "the target idiom (0 means any idiom)", "0");
 
-  sinst_analyzer_ = new sinst::SharedInstAnalyzer(knob_);
+  sinst_analyzer_ = new sinst::SharedInstAnalyzer;
   sinst_analyzer_->Register();
-  observer_ = new Observer(knob_);
-  observer_new_ = new ObserverNew(knob_);
+  observer_ = new Observer;
+  observer_new_ = new ObserverNew;
   observer_->Register();
   observer_new_->Register();
 }
@@ -113,7 +113,7 @@ void Scheduler::HandleProgramExit() {
   SchedulerCommon::HandleProgramExit();
 
   // save memoization
-  memo_->RefineCandidate(knob_->ValueBool("memo_failed"), false);
+  memo_->RefineCandidate(knob_->ValueBool("memo_failed"));
   memo_->Save(knob_->ValueStr("memo_out"), sinfo_);
   // save shared instruction db
   sinst_db_->Save(knob_->ValueStr("sinst_out"), sinfo_);

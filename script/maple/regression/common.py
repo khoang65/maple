@@ -130,10 +130,10 @@ def default_flags(suite):
     return None
 
 def default_cxx_flags():
-    return ['-g', '-Wall', '-Werror', '-fno-omit-frame-pointer', '-pthread']
+    return ['-g', '-Werror', '-fno-omit-frame-pointer', '-pthread']
 
 def default_c_flags():
-    return ['-g', '-Wall', '-Werror', '-fno-omit-frame-pointer', '-pthread']
+    return ['-g', '-Werror', '-fno-omit-frame-pointer', '-pthread']
 
 def compile(source, target, flags, echo=False):
     name, ext = os.path.splitext(source)
@@ -143,9 +143,6 @@ def compile(source, target, flags, echo=False):
         return util.c_compile(source, target, flags, echo)
     return False
 
-def echo(suite, success, reason=''):
-    if success:
-        logging.msg('regression %s - success!\n' % suite)
-    else:
-        logging.msg('regression %s - fail! %s\n' % (suite, reason))
+def echo(suite, message):
+    logging.msg('regression %s - %s\n' % (suite, message))
 

@@ -19,7 +19,7 @@ import os
 from maple.core import config
 from maple.core import pintool
 from maple.core import analyzer
-from maple.systematic import pintool as systematic_pintool
+from maple.systematic import scheduler
 
 class SinstAnalyzer(analyzer.Analyzer):
     def __init__(self):
@@ -77,7 +77,7 @@ class Profiler(pintool.Pintool):
         self.register_knob('ignore_ic_pthread', 'bool', True, 'do not count instructions in pthread')
         self.register_knob('ignore_lib', 'bool', False, 'whether ignore accesses from common libraries')
         self.register_knob('memo_failed', 'bool', True, 'whether memoize fail-to-expose iroots')
-        self.register_knob('debug_out', 'string', 'stdout', 'the output file for the debug messages', 'PATH') 
+        self.register_knob('debug_out', 'string', 'stdout', 'the output file for the debug messages')
         self.register_knob('stat_out', 'string', 'stat.out', 'the statistics output file', 'PATH')
         self.register_knob('sinfo_in', 'string', 'sinfo.db', 'the input static info database path', 'PATH')
         self.register_knob('sinfo_out', 'string', 'sinfo.db', 'the output static info database path', 'PATH')
@@ -132,18 +132,13 @@ class ChessProfiler(Profiler):
         self.register_knob('race_in', 'string', 'race.db', 'the input race database path', 'PATH')
         self.register_knob('race_out', 'string', 'race.db', 'the output race database path', 'PATH')
         self.schedulers = {}
-        self.add_scheduler(systematic_pintool.RandomScheduler())
-        self.add_scheduler(systematic_pintool.ChessScheduler())
+        self.add_scheduler(scheduler.RandomScheduler())
+        self.add_scheduler(scheduler.ChessScheduler())
     def so_path(self):
         return os.path.join(config.build_home(self.debug), 'idiom_chess_profiler.so')
     def add_scheduler(self, s):
+        self.merge_knob(s)
         self.schedulers[s.name] = s
-        for k, v in s.knobs.iteritems():
-            self.knobs[k] = v
-            self.knob_types[k] = s.knob_types[k]
-            self.knob_defaults[k] = s.knob_defaults[k]
-            self.knob_helps[k] = s.knob_helps[k]
-            self.knob_metavars[k] = s.knob_metavars[k]
 
 class Scheduler(pintool.Pintool):
     def __init__(self):
@@ -160,7 +155,7 @@ class Scheduler(pintool.Pintool):
         self.register_knob('memo_failed', 'bool', True, 'whether memoize fail-to-expose iroots')
         self.register_knob('yield_with_delay', 'bool', True, 'whether inject delays for async iroots')
         self.register_knob('test_history', 'string', 'test.histo', 'the test history file path', 'PATH')
-        self.register_knob('debug_out', 'string', 'stdout', 'the output file for the debug messages', 'PATH') 
+        self.register_knob('debug_out', 'string', 'stdout', 'the output file for the debug messages')
         self.register_knob('stat_out', 'string', 'stat.out', 'the statistics output file', 'PATH')
         self.register_knob('sinfo_in', 'string', 'sinfo.db', 'the input static info database path', 'PATH')
         self.register_knob('sinfo_out', 'string', 'sinfo.db', 'the output static info database path', 'PATH')

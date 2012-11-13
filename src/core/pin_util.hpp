@@ -26,7 +26,7 @@
 // Global definitions
 
 // Find RTN by function name in an image.
-extern RTN FindRTN(IMG img, const char *func_name);
+extern RTN FindRTN(IMG img, const std::string &func_name);
 
 // Get the IMG that contains the TRACE.
 extern IMG GetImgByTrace(TRACE trace);

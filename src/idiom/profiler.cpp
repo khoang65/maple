@@ -46,11 +46,11 @@ void Profiler::HandlePreSetup() {
   knob_->RegisterStr("sinst_in", "the input shared inst database path", "sinst.db");
   knob_->RegisterStr("sinst_out", "the output shared inst database path", "sinst.db");
 
-  sinst_analyzer_ = new sinst::SharedInstAnalyzer(knob_);
-  observer_ = new Observer(knob_);
-  observer_new_ = new ObserverNew(knob_);
-  predictor_ = new Predictor(knob_);
-  predictor_new_ = new PredictorNew(knob_);
+  sinst_analyzer_ = new sinst::SharedInstAnalyzer;
+  observer_ = new Observer;
+  observer_new_ = new ObserverNew;
+  predictor_ = new Predictor;
+  predictor_new_ = new PredictorNew;
   sinst_analyzer_->Register();
   observer_->Register();
   observer_new_->Register();
@@ -139,7 +139,7 @@ bool Profiler::HandleIgnoreMemAccess(IMG img) {
 void Profiler::HandleProgramExit() {
   ExecutionControl::HandleProgramExit();
 
-  memo_->RefineCandidate(knob_->ValueBool("memo_failed"), false);
+  memo_->RefineCandidate(knob_->ValueBool("memo_failed"));
 
   // save iroot db
   iroot_db_->Save(knob_->ValueStr("iroot_out"), sinfo_);
