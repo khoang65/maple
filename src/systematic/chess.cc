@@ -399,7 +399,8 @@ bool ChessScheduler::PorVisited(Action *next_action) {
       Execution *vs_exec = PorGetExec(vs->exec_id);
       State *vs_state = vs_exec->FindState(vs->state_idx);
       DEBUG_ASSERT(vs_state);
-      DEBUG_FMT_PRINT_SAFE("matching hash found, val = 0x%lx\n", new_hash_val);
+      // hash_val_t is of type size_t. %z should print this out correctly
+      DEBUG_FMT_PRINT_SAFE("matching hash found, val = 0x%zx\n", new_hash_val);
       DEBUG_FMT_PRINT_SAFE("   preemption = %d, exec_id = %d, state_idx = %d\n",
                            vs->preemptions, vs->exec_id, (int)vs->state_idx);
       if (vs->preemptions <= new_preemptions &&
