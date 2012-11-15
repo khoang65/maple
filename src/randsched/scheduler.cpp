@@ -26,6 +26,10 @@
 #include <cassert>
 #include <algorithm>
 
+// For unified printf style printing on 32 and 64 bit
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 namespace randsched {
 
 static unsigned long next = 1;
@@ -177,7 +181,9 @@ int Scheduler::RandomPriority() {
 
 void Scheduler::RandomDelay() {
   useconds_t t = (useconds_t)((double)delay_unit_ * random_number());
-  DEBUG_FMT_PRINT_SAFE("[T%lx] Delay time = %lu microseconds\n",
+
+  // PIN_THREAD_UID is a uint64
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] Delay time = %lu microseconds\n",
                        PIN_ThreadUid(), (unsigned long)t);
   usleep(t);
 }
@@ -229,7 +235,7 @@ void Scheduler::Randomize() {
 }
 
 void Scheduler::SetPriority(int priority) {
-  DEBUG_FMT_PRINT_SAFE("[T%lx] set priority = %d\n",
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] set priority = %d\n",
                        PIN_ThreadUid(), priority);
   if (knob_->ValueBool("strict")) {
     SetStrictPriority(priority);
