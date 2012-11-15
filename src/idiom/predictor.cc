@@ -123,7 +123,7 @@ void Predictor::SyscallEntry(thread_id_t curr_thd_id, timestamp_t curr_thd_clk,
   ScopedLock locker(internal_lock_);
 
   switch (syscall_num) {
-    case SYS_accept:
+    //case SYS_accept:
     case SYS_select:
     case SYS_pselect6:
     case SYS_rt_sigtimedwait:
