@@ -227,7 +227,8 @@ void Scheduler::Randomize() {
 }
 
 void Scheduler::SetPriority(int priority) {
-  DEBUG_FMT_PRINT_SAFE("[T%lx] set priority = %d\n", PIN_ThreadUid(), priority);
+  // PIN_THREAD_UID is a UInt64
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] set priority = %d\n", PIN_ThreadUid(), priority);
   if (knob_->ValueBool("strict")) {
     SetStrictPriority(priority);
   } else {
