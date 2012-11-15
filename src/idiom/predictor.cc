@@ -2235,10 +2235,16 @@ void Predictor::UpdateLocalInfo(thread_id_t curr_thd_id,
 }
 
 void Predictor::UpdateComplexiRoots() {
-  DEBUG_FMT_PRINT_SAFE("Num local pairs = %lu\n", local_info_.pair_db_.size());
-  DEBUG_FMT_PRINT_SAFE("Dyn event map size = %lu\n",
+  // dyn_event_map is a typdef DynEventMap which is a typedef named DynEventMap
+  // which is of type std::tr1::unordered_map<...>. .size() returns a
+  // size_type. %zu for printf style format strings should work here if
+  // size_type is a typedef for size_t. The same is assumed for .pair_db_'s
+  // call to size().
+  DEBUG_FMT_PRINT_SAFE("Num local pairs = %zu\n", local_info_.pair_db_.size());
+  
+  DEBUG_FMT_PRINT_SAFE("Dyn event map size = %zu\n",
                        local_info_.dyn_event_map_.size());
-  DEBUG_FMT_PRINT_SAFE("Reverse dyn event map size = %lu\n",
+  DEBUG_FMT_PRINT_SAFE("Reverse dyn event map size = %zu\n",
                        local_info_.r_dyn_event_map_.size());
   for (PredictorLocalInfo::PairSet::iterator it = local_info_.pair_db_.begin();
        it != local_info_.pair_db_.end(); ++it) {
