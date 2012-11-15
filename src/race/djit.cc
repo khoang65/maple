@@ -21,6 +21,10 @@
 
 #include "core/logging.h"
 
+// Used to properly print on 32 and 64 bit systems 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 namespace race {
 
 Djit::Djit() : track_racy_inst_(false) {
@@ -68,7 +72,9 @@ void Djit::ProcessRead(thread_id_t curr_thd_id, Meta *meta, Inst *inst) {
   // check writers
   VectorClock &writer_vc = djit_meta->writer_vc;
   if (!writer_vc.HappensBefore(curr_vc)) {
-    DEBUG_FMT_PRINT_SAFE("RAW race detcted [T%lx]\n", curr_thd_id);
+      // thread_id_t is of type uint64. PRIx64 should print this out correctly
+      // on 64 and 32 bit systems
+    DEBUG_FMT_PRINT_SAFE("RAW race detcted [T%" PRIx64 "\n", curr_thd_id);
     DEBUG_FMT_PRINT_SAFE("  addr = 0x%lx\n", djit_meta->addr);
     DEBUG_FMT_PRINT_SAFE("  inst = [%s]\n", inst->ToString().c_str());
     // mark the meta as racy
@@ -106,7 +112,7 @@ void Djit::ProcessWrite(thread_id_t curr_thd_id, Meta *meta, Inst *inst) {
   VectorClock &reader_vc = djit_meta->reader_vc;
   // check writers
   if (!writer_vc.HappensBefore(curr_vc)) {
-    DEBUG_FMT_PRINT_SAFE("WAW race detcted [T%lx]\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("WAW race detcted [T%" PRIx64 "]\n", curr_thd_id);
     DEBUG_FMT_PRINT_SAFE("  addr = 0x%lx\n", djit_meta->addr);
     DEBUG_FMT_PRINT_SAFE("  inst = [%s]\n", inst->ToString().c_str());
     // mark the meta as racy
@@ -127,7 +133,7 @@ void Djit::ProcessWrite(thread_id_t curr_thd_id, Meta *meta, Inst *inst) {
   }
   // check readers
   if (!reader_vc.HappensBefore(curr_vc)) {
-    DEBUG_FMT_PRINT_SAFE("WAR race detcted [T%lx]\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("WAR race detcted [T%" PRIx64 "]\n", curr_thd_id);
     DEBUG_FMT_PRINT_SAFE("  addr = 0x%lx\n", djit_meta->addr);
     DEBUG_FMT_PRINT_SAFE("  inst = [%s]\n", inst->ToString().c_str());
     // mark the meta as racy
