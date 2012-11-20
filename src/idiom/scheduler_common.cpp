@@ -24,6 +24,10 @@
 #include <sys/resource.h>
 #include <cstdlib>
 
+// Used to have generalized printing of 64 bit types
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include "core/pin_util.hpp"
 #include "core/stat.h"
 
@@ -310,7 +314,8 @@ void SchedulerCommon::HandleProgramExit() {
 void SchedulerCommon::HandleThreadStart() {
   thread_id_t curr_thd_id = PIN_ThreadUid();
   OS_THREAD_ID os_tid = PIN_GetTid();
-  DEBUG_FMT_PRINT_SAFE("[T%lx] Thread start\n", curr_thd_id);
+  // cur_thd_id is of type thread_id_t which is of type uint64
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] Thread start\n", curr_thd_id);
   LockMisc();
   thd_id_os_tid_map_[curr_thd_id] = os_tid;
   UnlockMisc();
@@ -335,7 +340,7 @@ void SchedulerCommon::HandleThreadExit() {
   LockMisc();
   thd_id_os_tid_map_.erase(curr_thd_id);
   UnlockMisc();
-  DEBUG_FMT_PRINT_SAFE("[T%lx] Thread exit\n", PIN_ThreadUid());
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] Thread exit\n", PIN_ThreadUid());
 }
 
 void SchedulerCommon::HandleMain(THREADID tid, CONTEXT *ctxt) {
@@ -1004,7 +1009,7 @@ int SchedulerCommon::GetPriority(thread_id_t target) {
 
 void SchedulerCommon::SetPriority(int priority) {
   // set the priority of the current thread
-  DEBUG_FMT_PRINT_SAFE("[T%lx] Set self priority=%d\n",
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] Set self priority=%d\n",
                        PIN_ThreadUid(), priority);
 
   if (knob_->ValueBool("strict")) {
@@ -1015,7 +1020,8 @@ void SchedulerCommon::SetPriority(int priority) {
 }
 
 void SchedulerCommon::SetPriority(thread_id_t target, int priority) {
-  DEBUG_FMT_PRINT_SAFE("[T%lx] Set priority(T%lx)=%d\n",
+    // PIN_ThreadUid() returns a typedef variable that is a uint64
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] Set priority(T%" PRIx64 ")=%d\n",
                        PIN_ThreadUid(), target, priority);
   LockMisc();
   priority_map_[target] = priority;
@@ -1554,7 +1560,7 @@ void SchedulerCommon::Idiom1BeforeEvent0(address_t addr, size_t size) {
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 0\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 0\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -1730,7 +1736,7 @@ void SchedulerCommon::Idiom1BeforeEvent1(address_t addr, size_t size) {
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 1\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 1\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -1889,7 +1895,7 @@ void SchedulerCommon::Idiom1AfterEvent0() {
   Idiom1SchedStatus *s = idiom1_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] post event 0\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] post event 0\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -1924,14 +1930,14 @@ void SchedulerCommon::Idiom1AfterEvent1() {
   Idiom1SchedStatus *s = idiom1_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] post event 1\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] post event 1\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
     case IDIOM1_STATE_E0_E1:
       if (curr_thd_id == s->thd_id_[1]) {
         ActivelyExposed();
-        DEBUG_FMT_PRINT_SAFE("[T%lx] iRoot %u exposed.\n",
+        DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] iRoot %u exposed.\n",
                              curr_thd_id, curr_iroot_->id());
         Idiom1SetState(IDIOM1_STATE_DONE);
         UnlockSchedStatus();
@@ -1965,7 +1971,7 @@ void SchedulerCommon::Idiom1WatchAccess(address_t addr, size_t size) {
           if (OVERLAP(addr, size, s->addr_[0], s->size_[0])) {
             // cannot be delayed any more
             if (Idiom1CheckGiveup(2)) {
-              DEBUG_FMT_PRINT_SAFE("[T%lx] watch access give up\n", curr_thd_id);
+              DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] watch access give up\n", curr_thd_id);
               DelaySet copy;
               Idiom1ClearDelaySet(&copy);
               Idiom1SetState(IDIOM1_STATE_INIT);
@@ -1985,7 +1991,7 @@ void SchedulerCommon::Idiom1WatchAccess(address_t addr, size_t size) {
             if (GetPriority(curr_thd_id) == LowerPriority()) {
               // cannot be delayed any more
               if (Idiom1CheckGiveup(2)) {
-                DEBUG_FMT_PRINT_SAFE("[T%lx] watch access give up\n", curr_thd_id);
+                DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] watch access give up\n", curr_thd_id);
                 DelaySet copy;
                 thread_id_t target = s->thd_id_[0];
                 Idiom1ClearDelaySet(&copy);
@@ -2044,7 +2050,7 @@ void SchedulerCommon::Idiom1WatchMemWrite(Inst *inst, address_t addr, size_t siz
 
 void SchedulerCommon::Idiom1SchedYield() {
   thread_id_t curr_thd_id = PIN_ThreadUid();
-  DEBUG_FMT_PRINT_SAFE("[T%lx] sched yield\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] sched yield\n", curr_thd_id);
   SetPriorityMin(curr_thd_id);
 }
 
@@ -2075,7 +2081,7 @@ bool SchedulerCommon::Idiom1CheckGiveup(int idx) {
   if (YieldWithDelay()) {
     Idiom1SchedStatus *s = idiom1_sched_status_;
     thread_id_t curr_thd_id = PIN_ThreadUid();
-    DEBUG_FMT_PRINT_SAFE("[T%lx] Check giveup\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] Check giveup\n", curr_thd_id);
     static unsigned long last_state[] = {IDIOM1_STATE_INVALID,
                                          IDIOM1_STATE_INVALID,
                                          IDIOM1_STATE_INVALID};
@@ -2087,7 +2093,7 @@ bool SchedulerCommon::Idiom1CheckGiveup(int idx) {
     if (time_delayed_each[idx] <= knob_->ValueInt("yield_delay_min_each") ||
         time_delayed_total <= knob_->ValueInt("yield_delay_max_total")) {
       if (s->state_ != last_state[idx] || curr_thd_id != last_thd[idx]) {
-        DEBUG_FMT_PRINT_SAFE("[T%lx] time delay\n", curr_thd_id);
+        DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] time delay\n", curr_thd_id);
         int time_unit = knob_->ValueInt("yield_delay_unit");
         last_state[idx] = s->state_;
         last_thd[idx] = curr_thd_id;
@@ -2110,7 +2116,7 @@ bool SchedulerCommon::Idiom1CheckGiveup(int idx) {
 }
 
 void SchedulerCommon::Idiom1SetState(unsigned long s) {
-  DEBUG_FMT_PRINT_SAFE("[T%lx] set state: %s\n", PIN_ThreadUid(),
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] set state: %s\n", PIN_ThreadUid(),
                        Idiom1SchedStatus::StateToString(s).c_str());
   idiom1_sched_status_->state_ = s;
 }
@@ -2210,7 +2216,7 @@ void SchedulerCommon::Idiom2BeforeEvent0(address_t addr, size_t size) {
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 0\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 0\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -2601,7 +2607,7 @@ void SchedulerCommon::Idiom2BeforeEvent1(address_t addr, size_t size) {
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 1\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 1\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -2997,7 +3003,7 @@ void SchedulerCommon::Idiom2BeforeEvent2(address_t addr, size_t size) {
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 2\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 2\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -3178,7 +3184,7 @@ void SchedulerCommon::Idiom2AfterEvent0() {
   Idiom2SchedStatus *s = idiom2_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 0\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 0\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -3214,7 +3220,7 @@ void SchedulerCommon::Idiom2AfterEvent1() {
   Idiom2SchedStatus *s = idiom2_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 1\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 1\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -3248,14 +3254,14 @@ void SchedulerCommon::Idiom2AfterEvent2() {
   Idiom2SchedStatus *s = idiom2_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 2\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 2\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
     case IDIOM2_STATE_E0_E1_E2:
       if (curr_thd_id == s->thd_id_[2]) {
         ActivelyExposed();
-        DEBUG_FMT_PRINT_SAFE("[T%lx] iRoot %u exposed.\n",
+        DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] iRoot %u exposed.\n",
                              curr_thd_id, curr_iroot_->id());
         Idiom2SetState(IDIOM2_STATE_DONE);
         UnlockSchedStatus();
@@ -3456,7 +3462,7 @@ void SchedulerCommon::Idiom2WatchInstCount(timestamp_t c) {
         s->window_ += c;
         if (s->window_ >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           Idiom2ClearDelaySet(&copy);
           Idiom2SetState(IDIOM2_STATE_INIT);
@@ -3475,7 +3481,7 @@ void SchedulerCommon::Idiom2WatchInstCount(timestamp_t c) {
         s->window_ = s->window_ + c;
         if (s->window_ >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           Idiom2ClearDelaySet(&copy);
           Idiom2SetState(IDIOM2_STATE_E1);
@@ -3494,7 +3500,7 @@ void SchedulerCommon::Idiom2WatchInstCount(timestamp_t c) {
         s->window_ = s->window_ + c;
         if (s->window_ >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           thread_id_t target = s->thd_id_[1];
           Idiom2ClearDelaySet(&copy);
@@ -3566,7 +3572,7 @@ bool SchedulerCommon::Idiom2CheckGiveup(int idx) {
   if (YieldWithDelay()) {
     Idiom2SchedStatus *s = idiom2_sched_status_;
     thread_id_t curr_thd_id = PIN_ThreadUid();
-    DEBUG_FMT_PRINT_SAFE("[T%lx] Check giveup\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] Check giveup\n", curr_thd_id);
     static unsigned long last_state[] = {IDIOM2_STATE_INVALID,
                                          IDIOM2_STATE_INVALID,
                                          IDIOM2_STATE_INVALID,
@@ -3580,7 +3586,7 @@ bool SchedulerCommon::Idiom2CheckGiveup(int idx) {
     if (time_delayed_each[idx] <= knob_->ValueInt("yield_delay_min_each") ||
         time_delayed_total <= knob_->ValueInt("yield_delay_max_total")) {
       if (s->state_ != last_state[idx] || curr_thd_id != last_thd[idx]) {
-        DEBUG_FMT_PRINT_SAFE("[T%lx] time delay\n", curr_thd_id);
+        DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] time delay\n", curr_thd_id);
         int time_unit = knob_->ValueInt("yield_delay_unit");
         last_state[idx] = s->state_;
         last_thd[idx] = curr_thd_id;
@@ -3602,7 +3608,7 @@ bool SchedulerCommon::Idiom2CheckGiveup(int idx) {
 }
 
 void SchedulerCommon::Idiom2SetState(unsigned long s) {
-  DEBUG_FMT_PRINT_SAFE("[T%lx] set state: %s\n", PIN_ThreadUid(),
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] set state: %s\n", PIN_ThreadUid(),
                        Idiom2SchedStatus::StateToString(s).c_str());
   idiom2_sched_status_->state_ = s;
 }
@@ -3747,7 +3753,7 @@ void SchedulerCommon::Idiom3BeforeEvent0(address_t addr, size_t size) {
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 0\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 0\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -4285,7 +4291,7 @@ void SchedulerCommon::Idiom3BeforeEvent1(address_t addr, size_t size) {
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 1\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 1\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -4808,7 +4814,7 @@ void SchedulerCommon::Idiom3BeforeEvent2(address_t addr, size_t size) {
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 2\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 2\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -5095,7 +5101,7 @@ void SchedulerCommon::Idiom3BeforeEvent3(address_t addr, size_t size) {
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 3\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 3\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -5370,7 +5376,7 @@ void SchedulerCommon::Idiom3AfterEvent0() {
   Idiom3SchedStatus *s = idiom3_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 0\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 0\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -5409,7 +5415,7 @@ void SchedulerCommon::Idiom3AfterEvent1() {
   Idiom3SchedStatus *s = idiom3_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 1\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 1\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -5443,7 +5449,7 @@ void SchedulerCommon::Idiom3AfterEvent2() {
   Idiom3SchedStatus *s = idiom3_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 2\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 2\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -5480,14 +5486,14 @@ void SchedulerCommon::Idiom3AfterEvent3() {
   Idiom3SchedStatus *s = idiom3_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 3\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 3\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
     case IDIOM3_STATE_E0_E1_E2_E3:
       if (curr_thd_id == s->thd_id_[3]) {
         ActivelyExposed();
-        DEBUG_FMT_PRINT_SAFE("[T%lx] iRoot %u exposed.\n",
+        DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] iRoot %u exposed.\n",
                              curr_thd_id, curr_iroot_->id());
         Idiom3SetState(IDIOM3_STATE_DONE);
         UnlockSchedStatus();
@@ -5755,7 +5761,7 @@ void SchedulerCommon::Idiom3WatchInstCount(timestamp_t c) {
         s->window_ += c;
         if (s->window_ >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           Idiom3ClearDelaySet(&copy);
           Idiom3SetState(IDIOM3_STATE_INIT);
@@ -5778,7 +5784,7 @@ void SchedulerCommon::Idiom3WatchInstCount(timestamp_t c) {
         s->window_ += c;
         if (s->window_ >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           thread_id_t target = s->thd_id_[1];
           Idiom3SetState(IDIOM3_STATE_INIT);
           UnlockSchedStatus();
@@ -5803,7 +5809,7 @@ void SchedulerCommon::Idiom3WatchInstCount(timestamp_t c) {
         s->window_ += c;
         if (s->window_ >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           thread_id_t target = s->thd_id_[1];
           Idiom3SetState(IDIOM3_STATE_INIT);
           UnlockSchedStatus();
@@ -5822,7 +5828,7 @@ void SchedulerCommon::Idiom3WatchInstCount(timestamp_t c) {
         s->window_ += c;
         if (s->window_ >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           thread_id_t target = s->thd_id_[1];
           Idiom3ClearDelaySet(&copy);
@@ -5893,7 +5899,7 @@ bool SchedulerCommon::Idiom3CheckGiveup(int idx) {
   if (YieldWithDelay()) {
     Idiom3SchedStatus *s = idiom3_sched_status_;
     thread_id_t curr_thd_id = PIN_ThreadUid();
-    DEBUG_FMT_PRINT_SAFE("[T%lx] Check giveup\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] Check giveup\n", curr_thd_id);
     static unsigned long last_state[] = {IDIOM3_STATE_INVALID,
                                          IDIOM3_STATE_INVALID,
                                          IDIOM3_STATE_INVALID,
@@ -5909,7 +5915,7 @@ bool SchedulerCommon::Idiom3CheckGiveup(int idx) {
     if (time_delayed_each[idx] <= knob_->ValueInt("yield_delay_min_each") ||
         time_delayed_total <= knob_->ValueInt("yield_delay_max_total")) {
       if (s->state_ != last_state[idx] || curr_thd_id != last_thd[idx]) {
-        DEBUG_FMT_PRINT_SAFE("[T%lx] time delay\n", curr_thd_id);
+        DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] time delay\n", curr_thd_id);
         int time_unit = knob_->ValueInt("yield_delay_unit");
         last_state[idx] = s->state_;
         last_thd[idx] = curr_thd_id;
@@ -5931,7 +5937,7 @@ bool SchedulerCommon::Idiom3CheckGiveup(int idx) {
 }
 
 void SchedulerCommon::Idiom3SetState(unsigned long s) {
-  DEBUG_FMT_PRINT_SAFE("[T%lx] set state: %s\n", PIN_ThreadUid(),
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] set state: %s\n", PIN_ThreadUid(),
                        Idiom3SchedStatus::StateToString(s).c_str());
   idiom3_sched_status_->state_ = s;
 }
@@ -6073,13 +6079,13 @@ void SchedulerCommon::Idiom4BeforeEvent0(address_t addr, size_t size) {
 
   DEBUG_STAT_INC("event0", 1);
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] before event 0, addr=0x%lx, size=%lx\n",
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] before event 0, addr=0x%lx, size=%xx\n",
                        curr_thd_id, addr, size);
 
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 0\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 0\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -6630,13 +6636,13 @@ void SchedulerCommon::Idiom4BeforeEvent1(address_t addr, size_t size) {
 
   DEBUG_STAT_INC("event1", 1);
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] before event 1, addr=0x%lx, size=%lx\n",
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] before event 1, addr=0x%lx, size=%zx\n",
                        curr_thd_id, addr, size);
 
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 1\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 1\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -7173,13 +7179,13 @@ void SchedulerCommon::Idiom4BeforeEvent2(address_t addr, size_t size) {
 
   DEBUG_STAT_INC("event2", 1);
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] before event 2, addr=0x%lx, size=%lx\n",
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] before event 2, addr=0x%lx, size=%zx\n",
                        curr_thd_id, addr, size);
 
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 2\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 2\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -7511,13 +7517,13 @@ void SchedulerCommon::Idiom4BeforeEvent3(address_t addr, size_t size) {
 
   DEBUG_STAT_INC("event3", 1);
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] before event 3, addr=0x%lx, size=%lx\n",
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] before event 3, addr=0x%lx, size=%zx\n",
                        curr_thd_id, addr, size);
 
   while (true) {
     // control variables
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 3\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 3\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -7875,7 +7881,7 @@ void SchedulerCommon::Idiom4AfterEvent0() {
   Idiom4SchedStatus *s = idiom4_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 0\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 0\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -7916,7 +7922,7 @@ void SchedulerCommon::Idiom4AfterEvent1() {
   Idiom4SchedStatus *s = idiom4_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 1\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 1\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -7950,7 +7956,7 @@ void SchedulerCommon::Idiom4AfterEvent2() {
   Idiom4SchedStatus *s = idiom4_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 2\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 2\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -7987,14 +7993,14 @@ void SchedulerCommon::Idiom4AfterEvent3() {
   Idiom4SchedStatus *s = idiom4_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 3\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 3\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
     case IDIOM4_STATE_E0_E1_E2_E3:
       if (curr_thd_id == s->thd_id_[3]) {
         ActivelyExposed();
-        DEBUG_FMT_PRINT_SAFE("[T%lx] iRoot %u exposed.\n",
+        DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] iRoot %u exposed.\n",
                              curr_thd_id, curr_iroot_->id());
         Idiom4SetState(IDIOM4_STATE_DONE);
         UnlockSchedStatus();
@@ -8282,7 +8288,7 @@ void SchedulerCommon::Idiom4WatchInstCount(timestamp_t c) {
           s->window_ += c;
           if (s->window_ >= vw_) {
             // window expired
-            DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+            DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
             DelaySet copy;
             Idiom4ClearDelaySet(&copy);
             Idiom4SetState(IDIOM4_STATE_INIT);
@@ -8305,7 +8311,7 @@ void SchedulerCommon::Idiom4WatchInstCount(timestamp_t c) {
           s->window_ += c;
           if (s->window_ >= vw_) {
             // window expired
-            DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+            DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
             thread_id_t target = s->thd_id_[1];
             Idiom4SetState(IDIOM4_STATE_INIT);
             UnlockSchedStatus();
@@ -8330,7 +8336,7 @@ void SchedulerCommon::Idiom4WatchInstCount(timestamp_t c) {
           s->window_ += c;
           if (s->window_ >= vw_) {
             // window expired
-            DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+            DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
             thread_id_t target = s->thd_id_[1];
             Idiom4SetState(IDIOM4_STATE_INIT);
             UnlockSchedStatus();
@@ -8349,7 +8355,7 @@ void SchedulerCommon::Idiom4WatchInstCount(timestamp_t c) {
           s->window_ += c;
           if (s->window_ >= vw_) {
             // window expired
-            DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+            DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
             DelaySet copy;
             thread_id_t target = s->thd_id_[1];
             Idiom4ClearDelaySet(&copy);
@@ -8424,7 +8430,7 @@ bool SchedulerCommon::Idiom4CheckGiveup(int idx) {
   if (YieldWithDelay()) {
     Idiom4SchedStatus *s = idiom4_sched_status_;
     thread_id_t curr_thd_id = PIN_ThreadUid();
-    DEBUG_FMT_PRINT_SAFE("[T%lx] Check giveup\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] Check giveup\n", curr_thd_id);
     static unsigned long last_state[] = {IDIOM4_STATE_INVALID,
                                          IDIOM4_STATE_INVALID,
                                          IDIOM4_STATE_INVALID,
@@ -8440,7 +8446,7 @@ bool SchedulerCommon::Idiom4CheckGiveup(int idx) {
     if (time_delayed_each[idx] <= knob_->ValueInt("yield_delay_min_each") ||
         time_delayed_total <= knob_->ValueInt("yield_delay_max_total")) {
       if (s->state_ != last_state[idx] || curr_thd_id != last_thd[idx]) {
-        DEBUG_FMT_PRINT_SAFE("[T%lx] time delay\n", curr_thd_id);
+        DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] time delay\n", curr_thd_id);
         int time_unit = knob_->ValueInt("yield_delay_unit");
         last_state[idx] = s->state_;
         last_thd[idx] = curr_thd_id;
@@ -8462,7 +8468,7 @@ bool SchedulerCommon::Idiom4CheckGiveup(int idx) {
 }
 
 void SchedulerCommon::Idiom4SetState(unsigned long s) {
-  DEBUG_FMT_PRINT_SAFE("[T%lx] set state: %s\n", PIN_ThreadUid(),
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] set state: %s\n", PIN_ThreadUid(),
                        Idiom4SchedStatus::StateToString(s).c_str());
   idiom4_sched_status_->state_ = s;
 }
@@ -8649,7 +8655,7 @@ void SchedulerCommon::Idiom5BeforeEvent0(address_t addr, size_t size) {
   while (true) {
     // control variable
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 0\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 0\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -9891,7 +9897,7 @@ void SchedulerCommon::Idiom5BeforeEvent1(address_t addr, size_t size) {
   while (true) {
     // control variable
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 1\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 1\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -10306,7 +10312,7 @@ void SchedulerCommon::Idiom5BeforeEvent1(address_t addr, size_t size) {
             Idiom5ClearDelaySet(&copy);
             Idiom5SetState(IDIOM5_STATE_E0_E1_E2_E3);
             ActivelyExposed();
-            DEBUG_FMT_PRINT_SAFE("[T%lx] iRoot %u exposed.\n",
+            DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] iRoot %u exposed.\n",
                                  curr_thd_id, curr_iroot_->id());
             UnlockSchedStatus();
             Idiom5WakeDelaySet(&copy);
@@ -10481,7 +10487,7 @@ void SchedulerCommon::Idiom5BeforeEvent1(address_t addr, size_t size) {
             Idiom5ClearDelaySet(&copy);
             Idiom5SetState(IDIOM5_STATE_E0_E1_E2_E3);
             ActivelyExposed();
-            DEBUG_FMT_PRINT_SAFE("[T%lx] iRoot %u exposed.\n",
+            DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] iRoot %u exposed.\n",
                                  curr_thd_id, curr_iroot_->id());
             UnlockSchedStatus();
             Idiom5WakeDelaySet(&copy);
@@ -10552,7 +10558,7 @@ void SchedulerCommon::Idiom5BeforeEvent2(address_t addr, size_t size) {
   while (true) {
     // control variable
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 2\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 2\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -11813,7 +11819,7 @@ void SchedulerCommon::Idiom5BeforeEvent3(address_t addr, size_t size) {
   while (true) {
     // control variable
     bool restart = false;
-    DEBUG_FMT_PRINT_SAFE("[T%lx] pre event 3\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] pre event 3\n", curr_thd_id);
 
     LockSchedStatus();
     switch (s->state_) {
@@ -12165,7 +12171,7 @@ void SchedulerCommon::Idiom5BeforeEvent3(address_t addr, size_t size) {
             Idiom5ClearDelaySet(&copy);
             Idiom5SetState(IDIOM5_STATE_E0_E1_E2_E3);
             ActivelyExposed();
-            DEBUG_FMT_PRINT_SAFE("[T%lx] iRoot %u exposed.\n",
+            DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] iRoot %u exposed.\n",
                                  curr_thd_id, curr_iroot_->id());
             UnlockSchedStatus();
             Idiom5WakeDelaySet(&copy);
@@ -12294,7 +12300,7 @@ void SchedulerCommon::Idiom5BeforeEvent3(address_t addr, size_t size) {
             Idiom5ClearDelaySet(&copy);
             Idiom5SetState(IDIOM5_STATE_E0_E1_E2_E3);
             ActivelyExposed();
-            DEBUG_FMT_PRINT_SAFE("[T%lx] iRoot %u exposed.\n",
+            DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] iRoot %u exposed.\n",
                                  curr_thd_id, curr_iroot_->id());
             UnlockSchedStatus();
             Idiom5WakeDelaySet(&copy);
@@ -12467,7 +12473,7 @@ void SchedulerCommon::Idiom5AfterEvent0() {
   Idiom5SchedStatus *s = idiom5_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 0\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 0\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -12535,7 +12541,7 @@ void SchedulerCommon::Idiom5AfterEvent1() {
   Idiom5SchedStatus *s = idiom5_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 1\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 1\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -12571,7 +12577,7 @@ void SchedulerCommon::Idiom5AfterEvent2() {
   Idiom5SchedStatus *s = idiom5_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 2\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 2\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -12637,7 +12643,7 @@ void SchedulerCommon::Idiom5AfterEvent3() {
   Idiom5SchedStatus *s = idiom5_sched_status_;
   thread_id_t curr_thd_id = PIN_ThreadUid();
 
-  DEBUG_FMT_PRINT_SAFE("[T%lx] after event 3\n", curr_thd_id);
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] after event 3\n", curr_thd_id);
 
   LockSchedStatus();
   switch (s->state_) {
@@ -13306,7 +13312,7 @@ void SchedulerCommon::Idiom5WatchInstCount(timestamp_t c) {
         s->window_[0] += c;
         if (s->window_[0] >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           Idiom5ClearDelaySet(&copy);
           Idiom5SetState(IDIOM5_STATE_INIT);
@@ -13326,7 +13332,7 @@ void SchedulerCommon::Idiom5WatchInstCount(timestamp_t c) {
         s->window_[1] += c;
         if (s->window_[1] >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           Idiom5ClearDelaySet(&copy);
           Idiom5SetState(IDIOM5_STATE_INIT);
@@ -13352,7 +13358,7 @@ void SchedulerCommon::Idiom5WatchInstCount(timestamp_t c) {
         s->window_[0] += c;
         if (s->window_[0] >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           thread_id_t target = s->thd_id_[2];
           Idiom5ClearDelaySet(&copy);
@@ -13369,7 +13375,7 @@ void SchedulerCommon::Idiom5WatchInstCount(timestamp_t c) {
         s->window_[1] += c;
         if (s->window_[1] >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           thread_id_t target = s->thd_id_[0];
           Idiom5ClearDelaySet(&copy);
@@ -13390,7 +13396,7 @@ void SchedulerCommon::Idiom5WatchInstCount(timestamp_t c) {
         s->window_[0] += c;
         if (s->window_[0] >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           Idiom5ClearDelaySet(&copy);
           Idiom5SetState(IDIOM5_STATE_E2_WATCH_E1);
@@ -13409,7 +13415,7 @@ void SchedulerCommon::Idiom5WatchInstCount(timestamp_t c) {
         s->window_[1] += c;
         if (s->window_[1] >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           Idiom5ClearDelaySet(&copy);
           Idiom5SetState(IDIOM5_STATE_E0_WATCH_E3);
@@ -13428,7 +13434,7 @@ void SchedulerCommon::Idiom5WatchInstCount(timestamp_t c) {
         s->window_[0] += c;
         if (s->window_[0] >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           thread_id_t target = s->thd_id_[2];
           Idiom5ClearDelaySet(&copy);
@@ -13449,7 +13455,7 @@ void SchedulerCommon::Idiom5WatchInstCount(timestamp_t c) {
         s->window_[1] += c;
         if (s->window_[1] >= vw_) {
           // window expired
-          DEBUG_FMT_PRINT_SAFE("[T%lx] window expired\n", curr_thd_id);
+          DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] window expired\n", curr_thd_id);
           DelaySet copy;
           thread_id_t target = s->thd_id_[0];
           Idiom5ClearDelaySet(&copy);
@@ -13521,7 +13527,7 @@ bool SchedulerCommon::Idiom5CheckGiveup(int idx) {
   if (YieldWithDelay()) {
     Idiom5SchedStatus *s = idiom5_sched_status_;
     thread_id_t curr_thd_id = PIN_ThreadUid();
-    DEBUG_FMT_PRINT_SAFE("[T%lx] Check giveup\n", curr_thd_id);
+    DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] Check giveup\n", curr_thd_id);
     static unsigned long last_state[] = {IDIOM5_STATE_INVALID,
                                          IDIOM5_STATE_INVALID,
                                          IDIOM5_STATE_INVALID,
@@ -13537,7 +13543,7 @@ bool SchedulerCommon::Idiom5CheckGiveup(int idx) {
     if (time_delayed_each[idx] <= knob_->ValueInt("yield_delay_min_each") ||
         time_delayed_total <= knob_->ValueInt("yield_delay_max_total")) {
       if (s->state_ != last_state[idx] || curr_thd_id != last_thd[idx]) {
-        DEBUG_FMT_PRINT_SAFE("[T%lx] time delay\n", curr_thd_id);
+        DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] time delay\n", curr_thd_id);
         int time_unit = knob_->ValueInt("yield_delay_unit");
         last_state[idx] = s->state_;
         last_thd[idx] = curr_thd_id;
@@ -13559,7 +13565,7 @@ bool SchedulerCommon::Idiom5CheckGiveup(int idx) {
 }
 
 void SchedulerCommon::Idiom5SetState(unsigned long s) {
-  DEBUG_FMT_PRINT_SAFE("[T%lx] set state: %s\n", PIN_ThreadUid(),
+  DEBUG_FMT_PRINT_SAFE("[T%" PRIx64 "] set state: %s\n", PIN_ThreadUid(),
                        Idiom5SchedStatus::StateToString(s).c_str());
   idiom5_sched_status_->state_ = s;
 }
