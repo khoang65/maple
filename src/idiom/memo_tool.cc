@@ -158,7 +158,7 @@ void MemoTool::total_candidate() {
 
   size_t total = memo_->TotalCandidate(false);
 
-  printf("%lu\n", total);
+  printf("%zu\n", total);
 }
 
 void MemoTool::total_exposed() {
@@ -170,13 +170,13 @@ void MemoTool::total_exposed() {
   size_t idiom4 = memo_->TotalExposed(IDIOM_4, true, false);
   size_t idiom5 = memo_->TotalExposed(IDIOM_5, true, false);
 
-  printf("%lu %lu %lu %lu %lu\n", idiom1, idiom2, idiom3, idiom4, idiom5);
+  printf("%zu %zu %zu %zu %zu\n", idiom1, idiom2, idiom3, idiom4, idiom5);
 }
 
 void MemoTool::total_predicted() {
   read_only_ = true;
 
-  printf("%lu\n", memo_->TotalPredicted(false));
+  printf("%zu\n", memo_->TotalPredicted(false));
 }
 
 void MemoTool::apply() {
