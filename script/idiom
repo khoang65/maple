@@ -5,9 +5,10 @@ PYTHON=python
 
 # obtain the script home
 SCRIPT_HOME=$(dirname $(readlink -f $0))
+PROTO_PYTHON="$PROTOBUF_HOME/../python"
 
 # setup python path for the scripts
-export PYTHONPATH=$SCRIPT_HOME:$PYTHONPATH
+export PYTHONPATH=$SCRIPT_HOME:$PROTO_PYTHON:$PYTHONPATH
 
 # call the python script
 $PYTHON $SCRIPT_HOME/maple/idiom/main.py $*
